@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Launchpad</title>
+<style>
+  :root{
+    --bg: #0d1117;
+    --grid-line: #1c2530;
+    --text: #e6edf3;
+    --muted: #7d8894;
+    --accent: #5ee6b0;
+    --accent-dim: #2b6b53;
+    --tile: #161d26;
+    --tile-hover: #1d2733;
+    --danger: #ff6b6b;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(circle at 1px 1px, var(--grid-line) 1px, transparent 1px) 0 0/28px 28px,
+      var(--bg);
+    color:var(--text);
+    font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+    padding: 48px 24px 80px;
+  }
+  header{
+    max-width: 880px;
+    margin: 0 auto 32px;
+  }
+  .prompt{
+    color: var(--accent);
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  h1{
+    font-size: 32px;
+    margin: 0 0 8px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .sub{
+    color: var(--muted);
+    font-size: 14px;
+    margin: 0;
+  }
+  .grid{
+    max-width: 880px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 18px;
+  }
+  .tile{
+    background: var(--tile);
+    border: 1px solid var(--grid-line);
+    border-radius: 14px;
+    padding: 20px 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--text);
+    cursor: pointer;
+    transition: transform .15s ease, border-color .15s ease, background .15s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .tile::before{
+    content:"";
+    position:absolute;
+    top:0; left:0; right:0;
+    height: 2px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform .2s ease;
+  }
+  .tile:hover{
+    transform: translateY(-3px);
+    border-color: var(--accent-dim);
+    background: var(--tile-hover);
+  }
+  .tile:hover::before{
+    transform: scaleX(1);
+  }
+  .tile:focus-visible{
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .icon{
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    background: linear-gradient(145deg, var(--icon-a), var(--icon-b));
+    box-shadow: 0 6px 16px -6px rgba(0,0,0,.6);
+    overflow: hidden;
+  }
+  .icon img{
+    width: 26px;
+    height: 26px;
+    object-fit: contain;
+    border-radius: 4px;
+  }
+  .name{
+    font-size: 13px;
+    text-align: center;
+    color: var(--text);
+    line-height: 1.3;
+    word-break: break-word;
+  }
+  .repo{
+    font-size: 10.5px;
+    color: var(--muted);
+    text-align:center;
+    word-break: break-all;
+  }
+  .remove-btn{
+    position:absolute;
+    top:6px;
+    right:6px;
+    width:20px;
+    height:20px;
+    border-radius:50%;
+    border:none;
+    background:rgba(0,0,0,0.4);
+    color:var(--muted);
+    font-size:12px;
+    line-height:1;
+    cursor:pointer;
+    display:none;
+    align-items:center;
+    justify-content:center;
+  }
+  .tile:hover .remove-btn{ display:flex; }
+  .remove-btn:hover{ color:var(--danger); background:rgba(255,107,107,0.15); }
+
+  /* Add tile */
+  .add-tile{
+    background: transparent;
+    border: 1.5px dashed var(--grid-line);
+    color: var(--muted);
+  }
+  .add-tile:hover{
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--tile);
+  }
+  .add-tile .icon{
+    background: transparent;
+    border: 1.5px dashed var(--grid-line);
+    box-shadow:none;
+    font-size:26px;
+  }
+  .add-tile:hover .icon{
+    border-color: var(--accent);
+  }
+
+  /* Modal */
+  .overlay{
+    position:fixed; inset:0;
+    background: rgba(0,0,0,0.6);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index: 50;
+    padding: 20px;
+  }
+  .overlay.open{ display:flex; }
+  .modal{
+    background: var(--tile);
+    border: 1px solid var(--grid-line);
+    border-radius: 14px;
+    padding: 28px;
+    width: 100%;
+    max-width: 380px;
+  }
+  .modal h2{
+    margin:0 0 18px;
+    font-size:17px;
+    color: var(--accent);
+  }
+  .field{
+    margin-bottom: 14px;
+  }
+  .field label{
+    display:block;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    margin-bottom: 6px;
+  }
+  .field input{
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--grid-line);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+  }
+  .field input:focus{
+    outline: none;
+    border-color: var(--accent);
+  }
+  .emoji-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top: 4px;
+  }
+  .emoji-choice{
+    width:34px; height:34px;
+    border-radius:8px;
+    border:1px solid var(--grid-line);
+    background: var(--bg);
+    font-size:16px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .emoji-choice.selected{
+    border-color: var(--accent);
+    background: rgba(94,230,176,0.12);
+  }
+  .modal-actions{
+    display:flex;
+    gap:10px;
+    margin-top: 22px;
+  }
+  .btn{
+    flex:1;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--grid-line);
+    background: transparent;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .btn.primary{
+    background: var(--accent);
+    color: #06251b;
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+  .btn:hover{ opacity: .9; }
+  .error{
+    color: var(--danger);
+    font-size: 12px;
+    margin-top: -6px;
+    margin-bottom: 10px;
+    min-height: 14px;
+  }
+  .empty{
+    max-width: 880px;
+    margin: 0 auto;
+    color: var(--muted);
+    font-size: 13px;
+    text-align:center;
+    padding: 30px 0;
+    border: 1px dashed var(--grid-line);
+    border-radius: 14px;
+  }
+  footer{
+    max-width: 880px;
+    margin: 40px auto 0;
+    color: var(--muted);
+    font-size: 11px;
+    text-align:center;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="prompt">~/apps $ ls</div>
+  <h1>Launchpad</h1>
+  <p class="sub">Your GitHub apps, one click away. Add your own — saved automatically.</p>
+</header>
+
+<div id="grid" class="grid"></div>
+<div id="empty" class="empty" style="display:none;">No apps yet. Click "Add app" to add your first one.</div>
+
+<footer id="status">loading…</footer>
+
+<!-- Modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2>Add app</h2>
+    <div class="field">
+      <label for="f-name">Name</label>
+      <input id="f-name" type="text" placeholder="Habbite" />
+    </div>
+    <div class="field">
+      <label for="f-url">Link</label>
+      <input id="f-url" type="text" placeholder="https://username.github.io/app/" />
+    </div>
+    <div class="field">
+      <label>Icon (auto-detected — or pick one)</label>
+      <div class="emoji-row" id="emoji-row"></div>
+    </div>
+    <div class="error" id="error"></div>
+    <div class="modal-actions">
+      <button class="btn" id="cancel-btn">Cancel</button>
+      <button class="btn primary" id="save-btn">Add app</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const EMOJIS = ["🚀","✅","☁️","💰","📝","🎮","📊","🔥","🧠","🎨","🛠️","📚","🎵","🏃","💬","🌱"];
+const COLORS = [
+  ["#3ddc97","#1f7a5c"], ["#6ea8ff","#2f5fb0"], ["#ffb84d","#b3781f"],
+  ["#ff8a8a","#b0362f"], ["#c78bff","#6b39a8"], ["#5ee6b0","#2b8a68"],
+  ["#ffd166","#b38a1f"], ["#7fd8ff","#2f7fb0"]
+];
+const STORAGE_KEY = "apps";
+const DEFAULT_APPS = [
+  { name: "Habbite", url: "https://shauryasinghmanager-gif.github.io/Habbite-/", icon: null }
+];
+let apps = [];
+let selectedEmoji = null; // null = auto-detect favicon
+
+function faviconUrl(url){
+  try{
+    const host = new URL(url).hostname;
+    return `https://www.google.com/s2/favicons?domain=${host}&sz=64`;
+  }catch(e){
+    return null;
+  }
+}
+
+function iconHtml(app){
+  if(app.icon){
+    return app.icon; // emoji chosen manually
+  }
+  const fav = faviconUrl(app.url);
+  return fav ? `<img src="${fav}" alt="" onerror="this.parentElement.textContent='🔗'">` : "🔗";
+}
+
+const grid = document.getElementById("grid");
+const emptyEl = document.getElementById("empty");
+const statusEl = document.getElementById("status");
+const overlay = document.getElementById("overlay");
+const nameInput = document.getElementById("f-name");
+const urlInput = document.getElementById("f-url");
+const errorEl = document.getElementById("error");
+const emojiRow = document.getElementById("emoji-row");
+
+function colorFor(index){
+  return COLORS[index % COLORS.length];
+}
+
+function normalizeUrl(url){
+  url = url.trim();
+  if(!/^https?:\/\//i.test(url)){
+    url = "https://" + url;
+  }
+  return url;
+}
+
+function hostnameOf(url){
+  try{ return new URL(url).hostname.replace(/^www\./,""); }
+  catch(e){ return url; }
+}
+
+function render(){
+  grid.innerHTML = "";
+  emptyEl.style.display = apps.length ? "none" : "block";
+
+  apps.forEach((app, i) => {
+    const [a,b] = colorFor(i);
+    const tile = document.createElement("a");
+    tile.className = "tile";
+    tile.href = app.url;
+    tile.target = "_blank";
+    tile.rel = "noopener";
+    tile.style.setProperty("--icon-a", a);
+    tile.style.setProperty("--icon-b", b);
+    tile.innerHTML = `
+      <button class="remove-btn" title="Remove" data-idx="${i}">✕</button>
+      <div class="icon">${iconHtml(app)}</div>
+      <div class="name">${escapeHtml(app.name)}</div>
+      <div class="repo">${escapeHtml(hostnameOf(app.url))}</div>
+    `;
+    grid.appendChild(tile);
+  });
+
+  // add tile always last
+  const addTile = document.createElement("div");
+  addTile.className = "tile add-tile";
+  addTile.id = "add-tile";
+  addTile.innerHTML = `<div class="icon">＋</div><div class="name">Add app</div>`;
+  grid.appendChild(addTile);
+
+  addTile.addEventListener("click", openModal);
+  grid.querySelectorAll(".remove-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      removeApp(parseInt(btn.dataset.idx, 10));
+    });
+  });
+}
+
+function escapeHtml(str){
+  const d = document.createElement("div");
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+async function loadApps(){
+  try{
+    const result = await window.storage.get(STORAGE_KEY, false);
+    apps = result ? JSON.parse(result.value) : null;
+  }catch(e){
+    apps = null;
+  }
+  if(apps === null){
+    apps = DEFAULT_APPS.slice();
+    saveApps();
+  }
+  render();
+  statusEl.textContent = apps.length ? `${apps.length} app${apps.length>1?"s":""} saved` : "";
+}
+
+async function saveApps(){
+  try{
+    await window.storage.set(STORAGE_KEY, JSON.stringify(apps), false);
+    statusEl.textContent = `${apps.length} app${apps.length!==1?"s":""} saved`;
+  }catch(e){
+    statusEl.textContent = "Couldn't save — try again";
+  }
+}
+
+function removeApp(idx){
+  apps.splice(idx, 1);
+  render();
+  saveApps();
+}
+
+function openModal(){
+  nameInput.value = "";
+  urlInput.value = "";
+  errorEl.textContent = "";
+  selectedEmoji = null;
+  buildEmojiRow();
+  overlay.classList.add("open");
+  setTimeout(() => nameInput.focus(), 50);
+}
+
+function closeModal(){
+  overlay.classList.remove("open");
+}
+
+function buildEmojiRow(){
+  emojiRow.innerHTML = "";
+
+  const autoBtn = document.createElement("div");
+  autoBtn.className = "emoji-choice" + (selectedEmoji === null ? " selected" : "");
+  autoBtn.textContent = "🌐";
+  autoBtn.title = "Auto-detect from link";
+  autoBtn.addEventListener("click", () => {
+    selectedEmoji = null;
+    buildEmojiRow();
+  });
+  emojiRow.appendChild(autoBtn);
+
+  EMOJIS.forEach(e => {
+    const btn = document.createElement("div");
+    btn.className = "emoji-choice" + (e === selectedEmoji ? " selected" : "");
+    btn.textContent = e;
+    btn.addEventListener("click", () => {
+      selectedEmoji = e;
+      buildEmojiRow();
+    });
+    emojiRow.appendChild(btn);
+  });
+}
+
+document.getElementById("cancel-btn").addEventListener("click", closeModal);
+overlay.addEventListener("click", (e) => { if(e.target === overlay) closeModal(); });
+
+document.getElementById("save-btn").addEventListener("click", () => {
+  const name = nameInput.value.trim();
+  let url = urlInput.value.trim();
+  if(!name){ errorEl.textContent = "Enter a name."; return; }
+  if(!url){ errorEl.textContent = "Enter a link."; return; }
+  url = normalizeUrl(url);
+  try{ new URL(url); }catch(e){ errorEl.textContent = "That link doesn't look valid."; return; }
+
+  apps.push({ name, url, icon: selectedEmoji || null });
+  render();
+  saveApps();
+  closeModal();
+});
+
+nameInput?.addEventListener("keydown", (e) => { if(e.key==="Enter") urlInput.focus(); });
+urlInput?.addEventListener("keydown", (e) => { if(e.key==="Enter") document.getElementById("save-btn").click(); });
+
+loadApps();
+</script>
+
+</body>
+</html>
