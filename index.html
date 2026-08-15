@@ -340,7 +340,8 @@ const COLORS = [
 const STORAGE_KEY = "apps";
 const DEFAULT_APPS = [
   { name: "Habit Tracker", url: "https://shauryasinghmanager-gif.github.io/Habbite-/", icon: "✅" },
-  { name: "Date Picker", url: "https://dhanuraj.github.io/date-picker/", icon: "📅" }
+  { name: "Date Picker", url: "https://dhanuraj.github.io/date-picker/", icon: "📅" },
+  { name: "Wallet", url: "https://shauryasinghmanager-gif.github.io/Wallet-me/", icon: "💰" }
 ];
 let apps = [];
 let selectedEmoji = null; // null = auto-detect favicon
@@ -472,6 +473,14 @@ async function loadApps(){
   if(apps === null){
     apps = DEFAULT_APPS.slice();
     saveApps();
+  } else {
+    // merge in any default apps not already saved (matched by url)
+    const existingUrls = new Set(apps.map(a => a.url));
+    const missing = DEFAULT_APPS.filter(d => !existingUrls.has(d.url));
+    if(missing.length){
+      apps = apps.concat(missing);
+      saveApps();
+    }
   }
   render();
   statusEl.textContent = apps.length ? `${apps.length} app${apps.length>1?"s":""} saved` : "";
