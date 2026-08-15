@@ -331,7 +331,7 @@
 </div>
 
 <script>
-const EMOJIS = ["🚀","✅","☁️","💰","📝","🎮","📊","🔥","🧠","🎨","🛠️","📚","🎵","🏃","💬","🌱"];
+const EMOJIS = ["🚀","✅","☁️","💰","📝","🎮","📊","🔥","🧠","🎨","🛠️","📚","🎵","🏃","💬","🌱","📅"];
 const COLORS = [
   ["#3ddc97","#1f7a5c"], ["#6ea8ff","#2f5fb0"], ["#ffb84d","#b3781f"],
   ["#ff8a8a","#b0362f"], ["#c78bff","#6b39a8"], ["#5ee6b0","#2b8a68"],
@@ -339,7 +339,8 @@ const COLORS = [
 ];
 const STORAGE_KEY = "apps";
 const DEFAULT_APPS = [
-  { name: "Habbite", url: "https://shauryasinghmanager-gif.github.io/Habbite-/", icon: null }
+  { name: "Habit Tracker", url: "https://shauryasinghmanager-gif.github.io/Habbite-/", icon: "✅" },
+  { name: "Date Picker", url: "https://dhanuraj.github.io/date-picker/", icon: "📅" }
 ];
 let apps = [];
 let selectedEmoji = null; // null = auto-detect favicon
