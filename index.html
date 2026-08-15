@@ -244,6 +244,47 @@
     border-color: var(--accent);
     background: rgba(94,230,176,0.12);
   }
+  .import-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding: 10px 12px;
+    border: 1px solid var(--grid-line);
+    border-radius: 8px;
+    background: var(--bg);
+    cursor: pointer;
+  }
+  .import-row.selected{
+    border-color: var(--accent);
+    background: rgba(94,230,176,0.12);
+  }
+  .import-row input{
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+    flex-shrink: 0;
+  }
+  .import-row .icon{
+    width: 32px;
+    height: 32px;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+  .import-row .info{
+    display:flex;
+    flex-direction:column;
+    gap: 2px;
+    min-width:0;
+  }
+  .import-row .info .n{
+    font-size: 13px;
+    color: var(--text);
+  }
+  .import-row .info .r{
+    font-size: 10.5px;
+    color: var(--muted);
+    word-break: break-all;
+  }
   .modal-actions{
     display:flex;
     gap:10px;
@@ -330,6 +371,19 @@
   </div>
 </div>
 
+<!-- Import modal -->
+<div class="overlay" id="import-overlay">
+  <div class="modal">
+    <h2>Import from GitHub</h2>
+    <div class="field" id="import-list" style="display:flex; flex-direction:column; gap:10px; max-height:320px; overflow-y:auto;"></div>
+    <div class="error" id="import-error"></div>
+    <div class="modal-actions">
+      <button class="btn" id="import-cancel-btn">Cancel</button>
+      <button class="btn primary" id="import-save-btn">Add selected</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const EMOJIS = ["🚀","✅","☁️","💰","📝","🎮","📊","🔥","🧠","🎨","🛠️","📚","🎵","🏃","💬","🌱","📅"];
 const COLORS = [
@@ -342,6 +396,18 @@ const DEFAULT_APPS = [
   { name: "Habit Tracker", url: "https://shauryasinghmanager-gif.github.io/Habbite-/", icon: "✅" },
   { name: "Date Picker", url: "https://dhanuraj.github.io/date-picker/", icon: "📅" },
   { name: "Wallet", url: "https://shauryasinghmanager-gif.github.io/Wallet-me/", icon: "💰" }
+];
+// Other repos found on your GitHub — pick which ones to add via "Import from GitHub"
+const CANDIDATE_REPOS = [
+  { name: "Expense Tracker", url: "https://shauryasinghmanager-gif.github.io/Expense-Tracker/", icon: "📊" },
+  { name: "Fina", url: "https://shauryasinghmanager-gif.github.io/Fina/", icon: "💵" },
+  { name: "GK", url: "https://shauryasinghmanager-gif.github.io/GK/", icon: "🧠" },
+  { name: "Gaadikhata", url: "https://shauryasinghmanager-gif.github.io/Gaadikhata/", icon: "🚗" },
+  { name: "Money Manager", url: "https://shauryasinghmanager-gif.github.io/Money-manager/", icon: "💰" },
+  { name: "Risk Ladder", url: "https://shauryasinghmanager-gif.github.io/Risk-Ladder-v2/", icon: "📈" },
+  { name: "Superstar Task", url: "https://shauryasinghmanager-gif.github.io/Superstar_task/", icon: "✅" },
+  { name: "Gaadi", url: "https://shauryasinghmanager-gif.github.io/gaadii/", icon: "🚙" },
+  { name: "Lender", url: "https://shauryasinghmanager-gif.github.io/testing_Lender/", icon: "💳" }
 ];
 let apps = [];
 let selectedEmoji = null; // null = auto-detect favicon
@@ -446,6 +512,18 @@ function render(){
   addTile.id = "add-tile";
   addTile.innerHTML = `<div class="icon">＋</div><div class="name">Add app</div>`;
   grid.appendChild(addTile);
+
+  // import tile — only show if there are unadded candidates
+  const existingUrls = new Set(apps.map(a => a.url));
+  const remaining = CANDIDATE_REPOS.filter(c => !existingUrls.has(c.url));
+  if(remaining.length){
+    const importTile = document.createElement("div");
+    importTile.className = "tile add-tile";
+    importTile.id = "import-tile";
+    importTile.innerHTML = `<div class="icon">⇩</div><div class="name">Import from GitHub</div>`;
+    grid.appendChild(importTile);
+    importTile.addEventListener("click", openImportModal);
+  }
 
   addTile.addEventListener("click", openModal);
   grid.querySelectorAll(".remove-btn").forEach(btn => {
@@ -559,6 +637,66 @@ document.getElementById("save-btn").addEventListener("click", () => {
 
 nameInput?.addEventListener("keydown", (e) => { if(e.key==="Enter") urlInput.focus(); });
 urlInput?.addEventListener("keydown", (e) => { if(e.key==="Enter") document.getElementById("save-btn").click(); });
+
+// --- Import from GitHub modal ---
+const importOverlay = document.getElementById("import-overlay");
+const importList = document.getElementById("import-list");
+const importError = document.getElementById("import-error");
+let selectedCandidates = new Set();
+
+function openImportModal(){
+  selectedCandidates = new Set();
+  importError.textContent = "";
+  buildImportList();
+  importOverlay.classList.add("open");
+}
+
+function closeImportModal(){
+  importOverlay.classList.remove("open");
+}
+
+function buildImportList(){
+  const existingUrls = new Set(apps.map(a => a.url));
+  const remaining = CANDIDATE_REPOS.filter(c => !existingUrls.has(c.url));
+  importList.innerHTML = "";
+  if(!remaining.length){
+    importList.innerHTML = `<div style="color:var(--muted); font-size:13px;">No more repos to import.</div>`;
+    return;
+  }
+  remaining.forEach(app => {
+    const row = document.createElement("label");
+    row.className = "import-row" + (selectedCandidates.has(app.url) ? " selected" : "");
+    row.innerHTML = `
+      <input type="checkbox" data-url="${app.url}" ${selectedCandidates.has(app.url) ? "checked" : ""}/>
+      <div class="icon">${app.icon}</div>
+      <div class="info">
+        <span class="n">${escapeHtml(app.name)}</span>
+        <span class="r">${escapeHtml(hostnameOf(app.url))}</span>
+      </div>
+    `;
+    const checkbox = row.querySelector("input");
+    checkbox.addEventListener("change", () => {
+      if(checkbox.checked){ selectedCandidates.add(app.url); row.classList.add("selected"); }
+      else { selectedCandidates.delete(app.url); row.classList.remove("selected"); }
+    });
+    importList.appendChild(row);
+  });
+}
+
+document.getElementById("import-cancel-btn").addEventListener("click", closeImportModal);
+importOverlay.addEventListener("click", (e) => { if(e.target === importOverlay) closeImportModal(); });
+
+document.getElementById("import-save-btn").addEventListener("click", () => {
+  if(!selectedCandidates.size){
+    importError.textContent = "Select at least one app.";
+    return;
+  }
+  const toAdd = CANDIDATE_REPOS.filter(c => selectedCandidates.has(c.url));
+  apps = apps.concat(toAdd);
+  render();
+  saveApps();
+  closeImportModal();
+});
 
 loadApps();
 </script>
