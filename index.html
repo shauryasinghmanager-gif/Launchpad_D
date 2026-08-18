@@ -543,8 +543,8 @@ function escapeHtml(str){
 
 async function loadApps(){
   try{
-    const result = await window.storage.get(STORAGE_KEY, false);
-    apps = result ? JSON.parse(result.value) : null;
+    const raw = localStorage.getItem(STORAGE_KEY);
+    apps = raw ? JSON.parse(raw) : null;
   }catch(e){
     apps = null;
   }
@@ -566,7 +566,7 @@ async function loadApps(){
 
 async function saveApps(){
   try{
-    await window.storage.set(STORAGE_KEY, JSON.stringify(apps), false);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(apps));
     statusEl.textContent = `${apps.length} app${apps.length!==1?"s":""} saved`;
   }catch(e){
     statusEl.textContent = "Couldn't save — try again";
